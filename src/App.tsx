@@ -32,7 +32,7 @@ const ADMIN_EMAIL = "sametkaraman0102@gmail.com";
 // --- FİLTRE AYARLARI ---
 const filter = new Filter();
 // Türkçe kötü kelimeleri buraya ekleyebilirsin
-filter.addWords("küfür1", "küfür2","yönetici", "system"); 
+filter.addWords("küfür1", "admin","yönetici", "system"); 
 
 const REGIONS = [
   { code: "GLOBAL", flag: "🌍" },
