@@ -50,3 +50,19 @@ Oyun 3 aşamadan oluşur:
 * **Tek Cevap Hakkı:** Bir soruya cevap verildiğinde sistem kilitlenir (`isProcessing` ref'i ile) ve 1 saniye sonra otomatik ilerler.
 * **Süre Dondurma (Freeze Time):** Cevap verildiğinde veya animasyonlar sırasında süre sayacı durdurulur (`isTransitioning` state'i ile), haksız süre kaybı önlenir.
 * **Rekor Sistemi:** Zamana karşı modunda her zorluk seviyesi için ayrı rekor (High Score) `localStorage` üzerinde tutulur.
+
+## 🛠️ Teknolojiler
+* React.js & TypeScript
+* Firebase (Auth & Database)
+* Bad-Words (Küfür Filtresi)
+* CSS3 (Modern & Responsive)
+* Vite & Netlify
+
+## 🚀 Kurulum (Local)
+1. Repoyu klonlayın.
+2. `npm install` komutu ile paketleri yükleyin.
+3. `npm run dev` ile çalıştırın.
+
+## 🎮 Hemen Oyna
+Oyunu tarayıcıda oynamak için tıkla:  
+👉 **[CANLI DEMO LİNKİ BURADA](https://mathrun1.netlify.app/)** 👈
