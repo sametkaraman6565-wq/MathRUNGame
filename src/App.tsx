@@ -19,7 +19,7 @@ import { PasswordResetConfirm } from "./components/PasswordResetConfirm";
 import { auth, db } from "./firebase";
 import { onAuthStateChanged, signOut, sendEmailVerification, updateProfile } from "firebase/auth";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
-import "./styles/app.css";
+import "./styles/game.css";
 
 // --- TİP TANIMLAMALARI ---
 type TimeDifficulty = "easy" | "medium" | "hard";
