@@ -1,0 +1,31 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .font-bold {
+        font-family: Arial, sans-serif;
+        font-weight: 900;
+        /* Taşmayı önlemek için font boyutu optimize edildi */
+        font-size: 32px; 
+      }
+      /* R harfi için eğiklik efekti */
+      .italic-r {
+        font-style: italic;
+      }
+    </style>
+  </defs>
+
+  <g>
+    <g transform="translate(1, 1)">
+      <text x="6" y="46" class="font-bold" fill="white" stroke="white" stroke-width="4" stroke-linejoin="round">M</text>
+      <text x="32" y="46" class="font-bold italic-r" fill="white" stroke="white" stroke-width="4" stroke-linejoin="round">R</text>
+    </g>
+
+    <g>
+      <text x="6" y="46" class="font-bold" fill="#1e40af">M</text>
+      <text x="32" y="46" class="font-bold italic-r" fill="#dc2626">R</text>
+    </g>
+  </g>
+
+  <path d="M 8 56 Q 32 62, 56 54" stroke="#1e40af" stroke-width="4" stroke-linecap="round" />
+
+</svg>
