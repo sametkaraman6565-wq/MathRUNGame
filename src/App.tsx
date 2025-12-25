@@ -19,15 +19,21 @@ import { PasswordResetConfirm } from "./components/PasswordResetConfirm";
 import { auth, db } from "./firebase";
 import { onAuthStateChanged, signOut, sendEmailVerification, updateProfile } from "firebase/auth";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
-import "./styles/game.css";
+// HATA ÇÖZÜMÜ: Süslü parantez eklendi { Filter }
+import { Filter } from 'bad-words'; 
+// HATA ÇÖZÜMÜ: Dosya ismini game.css olarak güncelledik (Vercel için)
+import "./styles/game.css"; 
 
 // --- TİP TANIMLAMALARI ---
 type TimeDifficulty = "easy" | "medium" | "hard";
 
-// --- YÖNETİCİ AYARLARI ---
 const ADMIN_EMAIL = "sametkaraman0102@gmail.com"; 
 
-// --- BÖLGELER (İsimler artık TRANSLATIONS içinde tutuluyor) ---
+// --- FİLTRE AYARLARI ---
+const filter = new Filter();
+// Türkçe kötü kelimeleri buraya ekleyebilirsin
+filter.addWords("küfür1", "küfür2", "admin", "yönetici", "system"); 
+
 const REGIONS = [
   { code: "GLOBAL", flag: "🌍" },
   { code: "TR", flag: "🇹🇷" },
@@ -53,7 +59,6 @@ const REGIONS = [
   { code: "PT", flag: "🇵🇹" },
 ];
 
-// --- AVATARLAR ---
 const AVATARS = [
   "🧑‍🚀", "🦸", "🥷", "🧙‍♂️", "🧚‍♀️", "🧛", "🧞‍♂️", "🧟", 
   "🤖", "👽", "👻", "🤡", "💩", "💀", "👺", "🦄",
@@ -63,12 +68,11 @@ const AVATARS = [
   "🦊", "🐲", "🦖", "🐙", "🦋", "🦉", "🍄", "🌹"
 ];
 
-// --- DİL SÖZLÜĞÜ (GÜNCELLENDİ) ---
 const TRANSLATIONS = {
   tr: {
     title: "MATH RUN",
     leaderboard: "REKOR TABLOSU",
-    local: "Yerel", // YENİ
+    local: "Yerel",
     menuSubtitle: "Matematik Koşusuna Hazır mısın?",
     modes: { normal: "PRATİK", normalDesc: "Süre yok, Puan yok, Sadece Pratik", timeAttack: "ZAMANA KARŞI", timeAttackDesc: "Süreyle Yarış!" },
     buttons: { exit: "ÇIKIŞ", back: "Geri Dön", mainMenu: "Ana Menü", pass: "PAS GEÇ", next: "SONRAKİ SORU", passRights: "Hakkın Var", debugOn: "Gizli Bilgi: AÇIK 🔓", debugOff: "Gizli Bilgi: KAPALI 🔒", confirmExitTitle: "Çıkış Yapılsın Mı?", confirmExitDesc: "Oyun sonlandırılacak ve puanın kaydedilecek.", confirmYes: "EVET, ÇIK", confirmNo: "HAYIR, DEVAM ET", globalLeaderboard: "DÜNYA SIRALAMASI 🌍", logout: "OTURUMU KAPAT", resendMail: "Doğrulama Mailini Tekrar Gönder", mailSent: "Mail gönderildi!", selectRegion: "Bölge Seç", editProfile: "Profili Düzenle", save: "KAYDET", saving: "KAYDEDİLİYOR..." },
@@ -79,8 +83,7 @@ const TRANSLATIONS = {
     messages: { correct: "Doğru!", wrong: "Yanlış!", timeBonus: "Süre Bonusu", passUsed: "Soru Pas Geçildi", skipped: "Soru Geçildi", points: "Puan", sn: "Sn", insufficient: "Puanın yetersiz. Hedef:", congratsEasy: "Tebrikler! 2. Seviyeye Geçildi 🚀", congratsMedium: "Harika! 3. Seviyeye Geçildi 🔥", won: "ŞAMPİYON!", wonDesc: "Tüm seviyeleri başarıyla tamamladın.", lost: "OYUN BİTTİ", timeUp: "Süre Doldu! ⌛", revisiting: "Pas geçilen sorulara dönülüyor! 🔄" },
     highScores: { easy: "Kolay", medium: "Orta", hard: "Zor" },
     timeModeTitles: { easy: "Rahat Zaman", medium: "Dengeli Zaman", hard: "Kaos Zamanı" },
-    profile: { title: "PROFİL AYARLARI", selectAvatar: "Avatar Seç", selectRegion: "Bölge Seç", current: "Seçili" },
-    // YENİ: Bölge İsimleri
+    profile: { title: "PROFİL AYARLARI", selectAvatar: "Avatar Seç", selectRegion: "Bölge Seç", selectName: "İsim Değiştir", current: "Seçili" },
     regions: {
       GLOBAL: "Dünya", TR: "Türkiye", AZ: "Azerbaycan", US: "ABD", DE: "Almanya",
       FR: "Fransa", GB: "İngiltere", JP: "Japonya", KR: "Güney Kore", CN: "Çin",
@@ -92,7 +95,7 @@ const TRANSLATIONS = {
   en: {
     title: "MATH RUN",
     leaderboard: "HIGH SCORES",
-    local: "Local", // YENİ
+    local: "Local",
     menuSubtitle: "Are you ready for the Math Run?",
     modes: { normal: "PRACTICE", normalDesc: "No Timer, No Score, Just Practice", timeAttack: "TIME ATTACK", timeAttackDesc: "Race against time!" },
     buttons: { exit: "EXIT", back: "Go Back", mainMenu: "Main Menu", pass: "PASS", next: "NEXT QUESTION", passRights: "Left", debugOn: "Secret Info: ON 🔓", debugOff: "Secret Info: OFF 🔒", confirmExitTitle: "Exit Game?", confirmExitDesc: "The game will end and your score will be saved.", confirmYes: "YES, EXIT", confirmNo: "NO, RESUME", globalLeaderboard: "WORLD LEADERBOARD 🌍", logout: "LOGOUT", resendMail: "Resend Verification Email", mailSent: "Email sent!", selectRegion: "Select Region", editProfile: "Edit Profile", save: "SAVE", saving: "SAVING..." },
@@ -103,14 +106,13 @@ const TRANSLATIONS = {
     messages: { correct: "Correct!", wrong: "Wrong!", timeBonus: "Time Bonus", passUsed: "Question Passed", skipped: "Question Skipped", points: "Pts", sn: "s", insufficient: "Insufficient score. Target:", congratsEasy: "Congrats! Moving to Level 2 🚀", congratsMedium: "Awesome! Moving to Level 3 🔥", won: "CHAMPION!", wonDesc: "You successfully completed all levels.", lost: "GAME OVER", timeUp: "Time's Up! ⌛", revisiting: "Revisiting passed questions! 🔄" },
     highScores: { easy: "Easy", medium: "Medium", hard: "Hard" },
     timeModeTitles: { easy: "Chill Time", medium: "Balanced Time", hard: "Chaos Time" },
-    profile: { title: "PROFILE SETTINGS", selectAvatar: "Select Avatar", selectRegion: "Select Region", current: "Selected" },
-    // YENİ: Bölge İsimleri (İngilizce)
+    profile: { title: "PROFILE SETTINGS", selectAvatar: "Select Avatar", selectRegion: "Select Region", selectName: "Change Name", current: "Selected" },
     regions: {
       GLOBAL: "World", TR: "Turkey", AZ: "Azerbaijan", US: "USA", DE: "Germany",
       FR: "France", GB: "UK", JP: "Japan", KR: "South Korea", CN: "China",
       RU: "Russia", BR: "Brazil", IT: "Italy", ES: "Spain", NL: "Netherlands",
       CA: "Canada", IN: "India", SA: "Saudi Arabia", MX: "Mexico", AR: "Argentina",
-      ID: "Indonesia", PT: "Portugal"
+      ID: "Indonesia", PT: "Portekiz"
     }
   }
 };
@@ -136,6 +138,7 @@ type Language = "tr" | "en";
 const ProfileSettingsModal = ({ 
   currentAvatar, 
   currentRegion, 
+  currentName,
   onSave, 
   onClose,
   isLoading,
@@ -143,14 +146,16 @@ const ProfileSettingsModal = ({
 }: { 
   currentAvatar: string, 
   currentRegion: string, 
-  onSave: (av: string, reg: string) => void, 
+  currentName: string,
+  onSave: (av: string, reg: string, name: string) => void,
   onClose: () => void,
   isLoading: boolean,
   t: any 
 }) => {
   const [tempAvatar, setTempAvatar] = useState(currentAvatar);
   const [tempRegion, setTempRegion] = useState(currentRegion);
-  const [activeTab, setActiveTab] = useState<"avatar" | "region">("avatar");
+  const [tempName, setTempName] = useState(currentName);
+  const [activeTab, setActiveTab] = useState<"avatar" | "region" | "name">("avatar");
 
   return (
     <div style={{
@@ -161,13 +166,12 @@ const ProfileSettingsModal = ({
       <div className="game-card" style={{ maxWidth: "500px", width: "95%", padding: "25px", animation: "popIn 0.3s ease", background: "white" }}>
         <h2 style={{ textAlign: "center", color: "#3b82f6", margin: "0 0 20px 0" }}>{t.profile.title}</h2>
         
-        {/* SEKMELER */}
-        <div style={{ display: "flex", gap: "10px", marginBottom: "20px" }}>
+        <div style={{ display: "flex", gap: "5px", marginBottom: "20px" }}>
           <button onClick={() => setActiveTab("avatar")} className="universal-btn small" style={{ flex: 1, background: activeTab === "avatar" ? "#3b82f6" : "#f3f4f6", color: activeTab === "avatar" ? "white" : "#666" }}>{t.profile.selectAvatar}</button>
           <button onClick={() => setActiveTab("region")} className="universal-btn small" style={{ flex: 1, background: activeTab === "region" ? "#3b82f6" : "#f3f4f6", color: activeTab === "region" ? "white" : "#666" }}>{t.profile.selectRegion}</button>
+          <button onClick={() => setActiveTab("name")} className="universal-btn small" style={{ flex: 1, background: activeTab === "name" ? "#3b82f6" : "#f3f4f6", color: activeTab === "name" ? "white" : "#666" }}>{t.profile.selectName}</button>
         </div>
 
-        {/* İÇERİK ALANI */}
         <div style={{ maxHeight: "40vh", overflowY: "auto", padding: "10px", background: "#f9fafb", borderRadius: "12px", border: "1px solid #eee" }}>
           
           {activeTab === "avatar" && (
@@ -208,28 +212,41 @@ const ProfileSettingsModal = ({
                   }}
                 >
                   <span style={{ fontSize: "2rem" }}>{reg.flag}</span>
-                  {/* YENİ: İsimleri t.regions'dan alıyoruz */}
                   <span style={{ fontSize: "0.8rem", color: "#444", marginTop: "5px", fontWeight: "bold" }}>{t.regions[reg.code]}</span>
                 </button>
               ))}
             </div>
           )}
+
+          {activeTab === "name" && (
+            <div style={{ padding: "10px", display: "flex", flexDirection: "column", gap: "10px" }}>
+               <label style={{fontWeight: "bold", color: "#555"}}>Yeni Kullanıcı Adı:</label>
+               <input 
+                 type="text" 
+                 value={tempName} 
+                 onChange={(e) => setTempName(e.target.value)} 
+                 placeholder="İsim girin..."
+                 maxLength={15}
+                 style={{padding: "15px", borderRadius: "10px", border: "1px solid #ccc", fontSize: "1.1rem"}}
+               />
+               <small style={{color: "#666"}}>En az 3 karakter olmalı. Uygunsuz ifadeler kullanılamaz.</small>
+            </div>
+          )}
         </div>
         
-        {/* ÖNİZLEME */}
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "10px", margin: "20px 0", fontSize: "1.2rem", background: "#fff", padding: "10px", borderRadius: "10px", boxShadow: "0 2px 5px rgba(0,0,0,0.05)" }}>
            <span style={{color: "#333"}}>{t.profile.current}:</span> 
            <span style={{ fontSize: "1.8rem" }}>{tempAvatar}</span>
            <span style={{ fontSize: "1.8rem" }}>{tempRegion}</span>
+           <span style={{ fontSize: "1.1rem", fontWeight: "bold", marginLeft: "5px", color: "#3b82f6" }}>{tempName}</span>
         </div>
 
-        {/* BUTONLAR */}
         <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
           <button onClick={onClose} className="universal-btn" style={{ background: "#9ca3af", color: "white" }} disabled={isLoading}>
             {t.buttons.back}
           </button>
           <button 
-            onClick={() => onSave(tempAvatar, tempRegion)} 
+            onClick={() => onSave(tempAvatar, tempRegion, tempName)} 
             className="universal-btn btn-primary"
             style={{ opacity: isLoading ? 0.7 : 1 }}
             disabled={isLoading}
@@ -281,14 +298,30 @@ function App() {
   const isProcessing = useRef(false);
   const t = TRANSLATIONS[language];
 
-  // --- HATA ÇÖZÜMÜ: PROFİL GÜNCELLEME ---
-  const handleProfileUpdate = async (newAvatar: string, newRegion: string) => {
+  // --- PROFİL GÜNCELLEME (İSİM + FİLTRE) ---
+  const handleProfileUpdate = async (newAvatar: string, newRegion: string, newName: string) => {
     setIsProcessingProfile(true);
     try {
+      if (newName.length < 3) {
+          alert("İsim en az 3 karakter olmalı.");
+          setIsProcessingProfile(false);
+          return;
+      }
+
+      if (filter.isProfane(newName)) {
+          alert("Bu kullanıcı adı uygunsuz kelimeler içeriyor. Lütfen değiştirin.");
+          setIsProcessingProfile(false);
+          return;
+      }
+
       const currentUser = auth.currentUser;
       if (currentUser) {
-        await updateProfile(currentUser, { photoURL: newAvatar });
-        setUser({ ...currentUser, photoURL: newAvatar });
+        await updateProfile(currentUser, { 
+            photoURL: newAvatar,
+            displayName: newName 
+        });
+        
+        setUser({ ...currentUser, photoURL: newAvatar, displayName: newName });
         setSelectedRegion(newRegion);
         localStorage.setItem("mathGameRegion", newRegion);
         setShowProfileModal(false);
@@ -360,6 +393,7 @@ function App() {
     localStorage.setItem("mathGameShowSecret", String(newValue));
   };
 
+  // HATA ÇÖZÜMÜ: Kullanılmayan parametre için _finalScore kullanıldı
   const checkHighScore = (_finalScore: number) => { return false; };
 
   const handleModeSelect = (mode: GameMode) => {
@@ -493,6 +527,7 @@ function App() {
           <ProfileSettingsModal 
              currentAvatar={user.photoURL || "👤"} 
              currentRegion={selectedRegion}
+             currentName={user.displayName || "Oyuncu"} 
              onSave={handleProfileUpdate}
              onClose={() => setShowProfileModal(false)}
              isLoading={isProcessingProfile} 
@@ -528,7 +563,6 @@ function App() {
         </div>
 
         <div className="high-score-panel" style={{top: "70px"}}>
-           {/* GÜNCELLENDİ: Yerel metni artık dinamik */}
            <h3 className="panel-title">🏆 {t.leaderboard} ({t.local})</h3>
            <div className="score-row easy"><span>🟢 {t.highScores.easy}</span><span>{highScores.easy}</span></div>
            <div className="score-row medium"><span>🟠 {t.highScores.medium}</span><span>{highScores.medium}</span></div>

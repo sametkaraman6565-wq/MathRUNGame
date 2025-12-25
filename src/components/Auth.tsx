@@ -13,10 +13,11 @@ import {
 import { auth } from "../firebase";
 import { Logo } from "./Logo";
 
-// Kayıt sırasında atanacak varsayılan avatar
+// Varsayılan Avatar
 const DEFAULT_AVATAR = "👤";
+// Varsayılan İsim (Google ismi yerine bu yazacak)
+const DEFAULT_NAME = "Oyuncu";
 
-// Google G Logosu (SVG)
 const GoogleIcon = () => (
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M23.52 12.29C23.52 11.43 23.44 10.61 23.3 9.82H12V14.46H18.46C18.18 15.93 17.33 17.18 16.06 18.04V21.01H19.93C22.19 18.93 23.52 15.87 23.52 12.29Z" fill="#4285F4"/>
@@ -35,13 +36,11 @@ export const Auth = () => {
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState(""); 
   const [username, setUsername] = useState("");
-  const [rememberMe, setRememberMe] = useState(false); // Cihazı Hatırla State'i
+  const [rememberMe, setRememberMe] = useState(false);
   
   const [error, setError] = useState("");
   const [resetMessage, setResetMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  
-  // Google Butonu Hover State'i
   const [isGoogleHover, setIsGoogleHover] = useState(false);
 
   // --- KAYIT OL ---
@@ -63,10 +62,9 @@ export const Auth = () => {
     }
 
     try {
-      // Önce kalıcılık ayarını yap
       await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
-      
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      // Varsayılan avatar ve girilen isim atanır
       await updateProfile(userCredential.user, {
         displayName: username,
         photoURL: DEFAULT_AVATAR
@@ -84,11 +82,8 @@ export const Auth = () => {
     e.preventDefault();
     setError("");
     setLoading(true);
-
     try {
-      // Önce kalıcılık ayarını yap
       await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
-
       await signInWithEmailAndPassword(auth, email, password);
     } catch (err: any) {
       console.error(err);
@@ -104,13 +99,11 @@ export const Auth = () => {
     setError("");
     setResetMessage("");
     setLoading(true);
-
     if (!email) {
         setError("Lütfen e-posta adresini gir.");
         setLoading(false);
         return;
     }
-
     try {
         await sendPasswordResetEmail(auth, email);
         setResetMessage("Sıfırlama bağlantısı e-postana gönderildi!");
@@ -122,13 +115,28 @@ export const Auth = () => {
     }
   };
 
-  // --- GOOGLE GİRİŞ ---
+  // --- GOOGLE GİRİŞ (ÖZELLEŞTİRİLMİŞ) ---
   const handleGoogleLogin = async () => {
     const provider = new GoogleAuthProvider();
     try {
-      // Google girişte de remember me tercihi uygulanabilir
       await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      // KONTROL: Eğer kullanıcının resmi bir "http" linki ise (yani Google resmiyse)
+      // veya ismi Google'dan geliyorsa, bunları BİZİM formatımıza çeviriyoruz.
+      const isGooglePhoto = user.photoURL?.startsWith("http");
+      
+      // Eğer profil resmi Google linki ise veya hiç ismi yoksa, oyuna uygun hale getir.
+      // Bu sayede Google adı ve resmi asla görünmez.
+      if (isGooglePhoto || !user.displayName) {
+          await updateProfile(user, {
+              displayName: DEFAULT_NAME, // "Oyuncu" yapar
+              photoURL: DEFAULT_AVATAR   // "👤" yapar
+          });
+          // Sayfayı yenilemeye gerek yok, App.tsx'teki listener bunu yakalayacak
+      }
+
     } catch (error: any) {
       console.error(error);
       setError("Google ile giriş yapılamadı.");
@@ -201,7 +209,6 @@ export const Auth = () => {
            />
         )}
 
-        {/* CİHAZI HATIRLA CHECKBOX (Sadece Giriş ve Kayıt ekranında) */}
         {view !== "reset" && (
             <div style={{ display: "flex", alignItems: "center", gap: "8px", paddingLeft: "10px", fontSize: "0.9rem", color: "#555" }}>
                 <input 
@@ -211,7 +218,7 @@ export const Auth = () => {
                     onChange={(e) => setRememberMe(e.target.checked)}
                     style={{ width: "18px", height: "18px", cursor: "pointer", accentColor: "#3b82f6" }}
                 />
-                <label htmlFor="rememberMe" style={{ cursor: "pointer" }}>Cihazı Hatırla (Oturum açık kalsın)</label>
+                <label htmlFor="rememberMe" style={{ cursor: "pointer" }}>Cihazı Hatırla</label>
             </div>
         )}
 
@@ -225,7 +232,6 @@ export const Auth = () => {
         </button>
       </form>
 
-      {/* GOOGLE BUTONU (ÖZEL TASARIM + HOVER EFEKTİ) */}
       {(view === "login" || view === "register") && (
           <button 
             type="button"
@@ -238,15 +244,15 @@ export const Auth = () => {
                 padding: "12px",
                 borderRadius: "50px",
                 border: "1px solid #d1d5db", 
-                background: isGoogleHover ? "#f9fafb" : "white", // Hover'da hafif gri
+                background: isGoogleHover ? "#f9fafb" : "white",
                 display: "flex", 
                 alignItems: "center", 
                 justifyContent: "center", 
                 gap: "12px", 
                 cursor: "pointer",
-                transition: "all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1)", // Diğer butonlarla aynı animasyon
-                transform: isGoogleHover ? "translateY(-4px)" : "none", // Hover'da yukarı kalkma
-                boxShadow: isGoogleHover ? "0 12px 25px rgba(0,0,0,0.1)" : "0 2px 5px rgba(0,0,0,0.05)" // Hover'da gölge
+                transition: "all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1)",
+                transform: isGoogleHover ? "translateY(-4px)" : "none",
+                boxShadow: isGoogleHover ? "0 12px 25px rgba(0,0,0,0.1)" : "0 2px 5px rgba(0,0,0,0.05)"
             }}
           >
             <GoogleIcon />
@@ -261,7 +267,6 @@ export const Auth = () => {
           </button>
       )}
 
-      {/* ALT LİNKLER */}
       <div style={{ marginTop: "25px", fontSize: "0.9rem", display: "flex", flexDirection: "column", gap: "12px", color: "#666" }}>
         
         {view === "login" && (
