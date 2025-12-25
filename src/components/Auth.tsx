@@ -13,9 +13,7 @@ import {
 import { auth } from "../firebase";
 import { Logo } from "./Logo";
 
-// Varsayılan Avatar
 const DEFAULT_AVATAR = "👤";
-// Varsayılan İsim (Google ismi yerine bu yazacak)
 const DEFAULT_NAME = "Oyuncu";
 
 const GoogleIcon = () => (
@@ -31,53 +29,30 @@ type AuthView = "login" | "register" | "reset";
 
 export const Auth = () => {
   const [view, setView] = useState<AuthView>("login");
-  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState(""); 
   const [username, setUsername] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
-  
   const [error, setError] = useState("");
   const [resetMessage, setResetMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [isGoogleHover, setIsGoogleHover] = useState(false);
 
-  // --- KAYIT OL ---
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
-
-    if (password !== passwordConfirm) {
-        setError("Şifreler eşleşmiyor.");
-        setLoading(false);
-        return;
-    }
-
-    if (username.length < 3) {
-        setError("Kullanıcı adı en az 3 karakter olmalı.");
-        setLoading(false);
-        return;
-    }
-
+    if (password !== passwordConfirm) { setError("Şifreler eşleşmiyor."); setLoading(false); return; }
+    if (username.length < 3) { setError("Kullanıcı adı en az 3 karakter olmalı."); setLoading(false); return; }
     try {
       await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      // Varsayılan avatar ve girilen isim atanır
-      await updateProfile(userCredential.user, {
-        displayName: username,
-        photoURL: DEFAULT_AVATAR
-      });
-    } catch (err: any) {
-      console.error(err);
-      setError("Kayıt hatası: " + err.message);
-    } finally {
-      setLoading(false);
-    }
+      await updateProfile(userCredential.user, { displayName: username, photoURL: DEFAULT_AVATAR });
+      window.location.reload(); // Kayıt sonrası temiz sayfa
+    } catch (err: any) { setError("Kayıt hatası: " + err.message); } finally { setLoading(false); }
   };
 
-  // --- GİRİŞ YAP ---
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -85,37 +60,20 @@ export const Auth = () => {
     try {
       await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
       await signInWithEmailAndPassword(auth, email, password);
-    } catch (err: any) {
-      console.error(err);
-      setError("Giriş başarısız. Bilgilerini kontrol et.");
-    } finally {
-      setLoading(false);
-    }
+    } catch (err: any) { setError("Giriş başarısız. Bilgilerini kontrol et."); } finally { setLoading(false); }
   };
 
-  // --- ŞİFRE SIFIRLA ---
   const handlePasswordReset = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setResetMessage("");
     setLoading(true);
-    if (!email) {
-        setError("Lütfen e-posta adresini gir.");
-        setLoading(false);
-        return;
-    }
-    try {
-        await sendPasswordResetEmail(auth, email);
-        setResetMessage("Sıfırlama bağlantısı e-postana gönderildi!");
-    } catch (err: any) {
-        console.error(err);
-        setError("Hata: " + err.message);
-    } finally {
-        setLoading(false);
-    }
+    if (!email) { setError("Lütfen e-posta adresini gir."); setLoading(false); return; }
+    try { await sendPasswordResetEmail(auth, email); setResetMessage("Sıfırlama bağlantısı gönderildi!"); } 
+    catch (err: any) { setError("Hata: " + err.message); } finally { setLoading(false); }
   };
 
-  // --- GOOGLE GİRİŞ (ÖZELLEŞTİRİLMİŞ) ---
+  // --- GOOGLE GİRİŞİ DÜZELTİLDİ ---
   const handleGoogleLogin = async () => {
     const provider = new GoogleAuthProvider();
     try {
@@ -123,20 +81,18 @@ export const Auth = () => {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
-      // KONTROL: Eğer kullanıcının resmi bir "http" linki ise (yani Google resmiyse)
-      // veya ismi Google'dan geliyorsa, bunları BİZİM formatımıza çeviriyoruz.
-      const isGooglePhoto = user.photoURL?.startsWith("http");
+      // Google fotosu mu diye kontrol et (http içeriyorsa linktir)
+      const isGooglePhoto = user.photoURL?.includes("http") || user.photoURL?.includes("google");
       
-      // Eğer profil resmi Google linki ise veya hiç ismi yoksa, oyuna uygun hale getir.
-      // Bu sayede Google adı ve resmi asla görünmez.
-      if (isGooglePhoto || !user.displayName) {
+      if (isGooglePhoto) {
+          // Google verilerini temizle ve varsayılanları ata
           await updateProfile(user, {
-              displayName: DEFAULT_NAME, // "Oyuncu" yapar
-              photoURL: DEFAULT_AVATAR   // "👤" yapar
+              displayName: DEFAULT_NAME, 
+              photoURL: DEFAULT_AVATAR   
           });
-          // Sayfayı yenilemeye gerek yok, App.tsx'teki listener bunu yakalayacak
+          // Değişikliğin hemen görünmesi için sayfayı yenile
+          window.location.reload();
       }
-
     } catch (error: any) {
       console.error(error);
       setError("Google ile giriş yapılamadı.");
@@ -144,158 +100,32 @@ export const Auth = () => {
   };
 
   const handleSubmit = (e: React.FormEvent) => {
-      if (view === "login") handleLogin(e);
-      else if (view === "register") handleRegister(e);
-      else if (view === "reset") handlePasswordReset(e);
+      if (view === "login") handleLogin(e); else if (view === "register") handleRegister(e); else if (view === "reset") handlePasswordReset(e);
   };
 
   return (
     <div className="game-card" style={{ maxWidth: "420px", padding: "40px 30px", textAlign: "center" }}>
-      
-      <div style={{display: "flex", justifyContent: "center", marginBottom: "20px"}}>
-        <Logo style={{maxWidth: "180px", height: "auto"}} />
-      </div>
-
-      <h2 style={{ marginBottom: "20px", color: "#333", fontSize: "1.5rem", fontWeight: "800", textTransform: "uppercase", letterSpacing: "1px" }}>
-        {view === "login" && "GİRİŞ YAP"}
-        {view === "register" && "KAYIT OL"}
-        {view === "reset" && "ŞİFRE SIFIRLA"}
-      </h2>
-
+      <div style={{display: "flex", justifyContent: "center", marginBottom: "20px"}}><Logo style={{maxWidth: "180px", height: "auto"}} /></div>
+      <h2 style={{ marginBottom: "20px", color: "#333", fontSize: "1.5rem", fontWeight: "800", textTransform: "uppercase", letterSpacing: "1px" }}>{view === "login" && "GİRİŞ YAP"}{view === "register" && "KAYIT OL"}{view === "reset" && "ŞİFRE SIFIRLA"}</h2>
       {error && <div style={{ color: "white", background: "#ef4444", padding: "12px", borderRadius: "10px", marginBottom: "20px", fontSize: "0.9rem", fontWeight: "bold" }}>{error}</div>}
       {resetMessage && <div style={{ color: "#166534", background: "#dcfce7", padding: "12px", borderRadius: "10px", marginBottom: "20px", fontSize: "0.9rem", fontWeight: "bold" }}>{resetMessage}</div>}
-
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
-        
-        {view === "register" && (
-          <input
-            type="text"
-            placeholder="Kullanıcı Adı"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-            style={{ padding: "15px", borderRadius: "50px", border: "1px solid #e5e7eb", fontSize: "1rem", outline: "none", background: "#f9fafb", color: "#333" }}
-          />
-        )}
-
-        <input
-          type="email"
-          placeholder={view === "reset" ? "Kayıtlı E-posta Adresi" : "E-posta Adresi"}
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          style={{ padding: "15px", borderRadius: "50px", border: "1px solid #e5e7eb", fontSize: "1rem", outline: "none", background: "#f9fafb", color: "#333" }}
-        />
-
-        {view !== "reset" && (
-            <input
-            type="password"
-            placeholder="Şifre"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            style={{ padding: "15px", borderRadius: "50px", border: "1px solid #e5e7eb", fontSize: "1rem", outline: "none", background: "#f9fafb", color: "#333" }}
-            />
-        )}
-
-        {view === "register" && (
-             <input
-             type="password"
-             placeholder="Şifre Tekrar"
-             value={passwordConfirm}
-             onChange={(e) => setPasswordConfirm(e.target.value)}
-             required
-             style={{ padding: "15px", borderRadius: "50px", border: "1px solid #e5e7eb", fontSize: "1rem", outline: "none", background: "#f9fafb", color: "#333" }}
-           />
-        )}
-
-        {view !== "reset" && (
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", paddingLeft: "10px", fontSize: "0.9rem", color: "#555" }}>
-                <input 
-                    type="checkbox" 
-                    id="rememberMe" 
-                    checked={rememberMe} 
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    style={{ width: "18px", height: "18px", cursor: "pointer", accentColor: "#3b82f6" }}
-                />
-                <label htmlFor="rememberMe" style={{ cursor: "pointer" }}>Cihazı Hatırla</label>
-            </div>
-        )}
-
-        <button 
-            type="submit" 
-            className="universal-btn btn-primary"
-            disabled={loading}
-            style={{ marginTop: "5px", padding: "15px", borderRadius: "50px", fontSize: "1rem", fontWeight: "bold" }}
-        >
-          {loading ? "İŞLENİYOR..." : view === "login" ? "GİRİŞ YAP" : view === "register" ? "KAYIT OL" : "MAİL GÖNDER"}
-        </button>
+        {view === "register" && <input type="text" placeholder="Kullanıcı Adı" value={username} onChange={(e) => setUsername(e.target.value)} required style={{ padding: "15px", borderRadius: "50px", border: "1px solid #e5e7eb", fontSize: "1rem", outline: "none", background: "#f9fafb", color: "#333" }} />}
+        <input type="email" placeholder={view === "reset" ? "Kayıtlı E-posta" : "E-posta Adresi"} value={email} onChange={(e) => setEmail(e.target.value)} required style={{ padding: "15px", borderRadius: "50px", border: "1px solid #e5e7eb", fontSize: "1rem", outline: "none", background: "#f9fafb", color: "#333" }} />
+        {view !== "reset" && <input type="password" placeholder="Şifre" value={password} onChange={(e) => setPassword(e.target.value)} required style={{ padding: "15px", borderRadius: "50px", border: "1px solid #e5e7eb", fontSize: "1rem", outline: "none", background: "#f9fafb", color: "#333" }} />}
+        {view === "register" && <input type="password" placeholder="Şifre Tekrar" value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)} required style={{ padding: "15px", borderRadius: "50px", border: "1px solid #e5e7eb", fontSize: "1rem", outline: "none", background: "#f9fafb", color: "#333" }} />}
+        {view !== "reset" && <div style={{ display: "flex", alignItems: "center", gap: "8px", paddingLeft: "10px", fontSize: "0.9rem", color: "#555" }}><input type="checkbox" id="rememberMe" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} style={{ width: "18px", height: "18px", cursor: "pointer", accentColor: "#3b82f6" }} /><label htmlFor="rememberMe" style={{ cursor: "pointer" }}>Cihazı Hatırla</label></div>}
+        <button type="submit" className="universal-btn btn-primary" disabled={loading} style={{ marginTop: "5px", padding: "15px", borderRadius: "50px", fontSize: "1rem", fontWeight: "bold" }}>{loading ? "İŞLENİYOR..." : view === "login" ? "GİRİŞ YAP" : view === "register" ? "KAYIT OL" : "MAİL GÖNDER"}</button>
       </form>
-
       {(view === "login" || view === "register") && (
-          <button 
-            type="button"
-            onClick={handleGoogleLogin} 
-            onMouseEnter={() => setIsGoogleHover(true)}
-            onMouseLeave={() => setIsGoogleHover(false)}
-            style={{ 
-                width: "100%",
-                marginTop: "15px",
-                padding: "12px",
-                borderRadius: "50px",
-                border: "1px solid #d1d5db", 
-                background: isGoogleHover ? "#f9fafb" : "white",
-                display: "flex", 
-                alignItems: "center", 
-                justifyContent: "center", 
-                gap: "12px", 
-                cursor: "pointer",
-                transition: "all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1)",
-                transform: isGoogleHover ? "translateY(-4px)" : "none",
-                boxShadow: isGoogleHover ? "0 12px 25px rgba(0,0,0,0.1)" : "0 2px 5px rgba(0,0,0,0.05)"
-            }}
-          >
-            <GoogleIcon />
-            <span style={{ 
-                color: "#4b5563", 
-                fontWeight: "bold", 
-                fontSize: "1rem",
-                fontFamily: "'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
-            }}>
-                Google ile {view === "register" ? "Kayıt Ol" : "Giriş Yap"}
-            </span>
+          <button type="button" onClick={handleGoogleLogin} onMouseEnter={() => setIsGoogleHover(true)} onMouseLeave={() => setIsGoogleHover(false)} style={{ width: "100%", marginTop: "15px", padding: "12px", borderRadius: "50px", border: "1px solid #d1d5db", background: isGoogleHover ? "#f9fafb" : "white", display: "flex", alignItems: "center", justifyContent: "center", gap: "12px", cursor: "pointer", transition: "all 0.25s", transform: isGoogleHover ? "translateY(-4px)" : "none", boxShadow: isGoogleHover ? "0 12px 25px rgba(0,0,0,0.1)" : "0 2px 5px rgba(0,0,0,0.05)" }}>
+            <GoogleIcon /><span style={{ color: "#4b5563", fontWeight: "bold", fontSize: "1rem", fontFamily: "'Segoe UI', Roboto, Helvetica, Arial, sans-serif" }}>Google ile {view === "register" ? "Kayıt Ol" : "Giriş Yap"}</span>
           </button>
       )}
-
       <div style={{ marginTop: "25px", fontSize: "0.9rem", display: "flex", flexDirection: "column", gap: "12px", color: "#666" }}>
-        
-        {view === "login" && (
-            <>
-                <button 
-                    onClick={() => setView("reset")} 
-                    style={{ background: "none", border: "none", color: "#666", cursor: "pointer", textDecoration: "underline", fontSize: "0.9rem" }}
-                >
-                    Şifremi Unuttum
-                </button>
-                
-                <div>
-                    Hesabın yok mu? <button onClick={() => setView("register")} style={{ background: "none", border: "none", color: "#3b82f6", fontWeight: "bold", cursor: "pointer", fontSize: "0.95rem" }}>Kayıt Ol</button>
-                </div>
-            </>
-        )}
-
-        {view === "register" && (
-            <div>
-                Zaten hesabın var mı? <button onClick={() => setView("login")} style={{ background: "none", border: "none", color: "#3b82f6", fontWeight: "bold", cursor: "pointer", fontSize: "0.95rem" }}>Giriş Yap</button>
-            </div>
-        )}
-
-        {view === "reset" && (
-            <button onClick={() => setView("login")} style={{ background: "none", border: "none", color: "#3b82f6", fontWeight: "bold", cursor: "pointer", fontSize: "0.95rem" }}>
-                Giriş Ekranına Dön
-            </button>
-        )}
-
+        {view === "login" && <><button onClick={() => setView("reset")} style={{ background: "none", border: "none", color: "#666", cursor: "pointer", textDecoration: "underline", fontSize: "0.9rem" }}>Şifremi Unuttum</button><div>Hesabın yok mu? <button onClick={() => setView("register")} style={{ background: "none", border: "none", color: "#3b82f6", fontWeight: "bold", cursor: "pointer", fontSize: "0.95rem" }}>Kayıt Ol</button></div></>}
+        {view === "register" && <div>Zaten hesabın var mı? <button onClick={() => setView("login")} style={{ background: "none", border: "none", color: "#3b82f6", fontWeight: "bold", cursor: "pointer", fontSize: "0.95rem" }}>Giriş Yap</button></div>}
+        {view === "reset" && <button onClick={() => setView("login")} style={{ background: "none", border: "none", color: "#3b82f6", fontWeight: "bold", cursor: "pointer", fontSize: "0.95rem" }}>Giriş Ekranına Dön</button>}
       </div>
     </div>
   );

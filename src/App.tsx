@@ -7,6 +7,8 @@ import {
   TouchSensor 
 } from "@dnd-kit/core"; 
 import type { DragEndEvent } from "@dnd-kit/core";
+
+// --- KENDİ BİLEŞENLERİMİZ ---
 import { generateEquation } from "./utils/generateEquation";
 import type { Difficulty, Equation } from "./types";
 import { EquationView } from "./components/EquationView";
@@ -16,24 +18,33 @@ import { saveScoreToFirebase } from "./utils/firebaseUtils";
 import { Auth } from "./components/Auth";
 import { GlobalLeaderboard } from "./components/GlobalLeaderboard";
 import { PasswordResetConfirm } from "./components/PasswordResetConfirm";
+
+// --- FIREBASE ---
 import { auth, db } from "./firebase";
 import { onAuthStateChanged, signOut, sendEmailVerification, updateProfile } from "firebase/auth";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
-// HATA ÇÖZÜMÜ: Süslü parantez eklendi { Filter }
+
+// --- DİĞER KÜTÜPHANELER ---
 import { Filter } from 'bad-words'; 
-// HATA ÇÖZÜMÜ: Dosya ismini game.css olarak güncelledik (Vercel için)
 import "./styles/game.css"; 
 
-// --- TİP TANIMLAMALARI ---
-type TimeDifficulty = "easy" | "medium" | "hard";
+// ====================================================================
+// 1. SABİTLER VE AYARLAR
+// ====================================================================
 
+// Varsayılan Kullanıcı Verileri
+const DEFAULT_AVATAR = "👤";
+const DEFAULT_NAME = "Oyuncu";
+
+type TimeDifficulty = "easy" | "medium" | "hard";
 const ADMIN_EMAIL = "sametkaraman0102@gmail.com"; 
 
-// --- FİLTRE AYARLARI ---
+// --- KÜFÜR FİLTRESİ ---
 const filter = new Filter();
-// Türkçe kötü kelimeleri buraya ekleyebilirsin
-filter.addWords("küfür1", "admin","yönetici", "system"); 
+// Türkçe yasaklı kelimeleri buraya ekleyebilirsin
+filter.addWords("küfür1", "küfür2", "admin", "yönetici", "system", "moderator", "destek"); 
 
+// --- BÖLGELER ---
 const REGIONS = [
   { code: "GLOBAL", flag: "🌍" },
   { code: "TR", flag: "🇹🇷" },
@@ -59,6 +70,7 @@ const REGIONS = [
   { code: "PT", flag: "🇵🇹" },
 ];
 
+// --- AVATARLAR ---
 const AVATARS = [
   "🧑‍🚀", "🦸", "🥷", "🧙‍♂️", "🧚‍♀️", "🧛", "🧞‍♂️", "🧟", 
   "🤖", "👽", "👻", "🤡", "💩", "💀", "👺", "🦄",
@@ -68,6 +80,7 @@ const AVATARS = [
   "🦊", "🐲", "🦖", "🐙", "🦋", "🦉", "🍄", "🌹"
 ];
 
+// --- DİL ÇEVİRİLERİ ---
 const TRANSLATIONS = {
   tr: {
     title: "MATH RUN",
@@ -112,7 +125,7 @@ const TRANSLATIONS = {
       FR: "France", GB: "UK", JP: "Japan", KR: "South Korea", CN: "China",
       RU: "Russia", BR: "Brazil", IT: "Italy", ES: "Spain", NL: "Netherlands",
       CA: "Canada", IN: "India", SA: "Saudi Arabia", MX: "Mexico", AR: "Argentina",
-      ID: "Indonesia", PT: "Portekiz"
+      ID: "Indonesia", PT: "Portugal"
     }
   }
 };
@@ -134,7 +147,9 @@ type QuestionPhase = "normal" | "revisiting";
 type GameMode = "normal" | "timeAttack"; 
 type Language = "tr" | "en"; 
 
-// --- PROFİL DÜZENLEME MODALI ---
+// ====================================================================
+// 2. PROFİL AYARLARI MODALI
+// ====================================================================
 const ProfileSettingsModal = ({ 
   currentAvatar, 
   currentRegion, 
@@ -166,14 +181,17 @@ const ProfileSettingsModal = ({
       <div className="game-card" style={{ maxWidth: "500px", width: "95%", padding: "25px", animation: "popIn 0.3s ease", background: "white" }}>
         <h2 style={{ textAlign: "center", color: "#3b82f6", margin: "0 0 20px 0" }}>{t.profile.title}</h2>
         
+        {/* SEKMELER */}
         <div style={{ display: "flex", gap: "5px", marginBottom: "20px" }}>
           <button onClick={() => setActiveTab("avatar")} className="universal-btn small" style={{ flex: 1, background: activeTab === "avatar" ? "#3b82f6" : "#f3f4f6", color: activeTab === "avatar" ? "white" : "#666" }}>{t.profile.selectAvatar}</button>
           <button onClick={() => setActiveTab("region")} className="universal-btn small" style={{ flex: 1, background: activeTab === "region" ? "#3b82f6" : "#f3f4f6", color: activeTab === "region" ? "white" : "#666" }}>{t.profile.selectRegion}</button>
           <button onClick={() => setActiveTab("name")} className="universal-btn small" style={{ flex: 1, background: activeTab === "name" ? "#3b82f6" : "#f3f4f6", color: activeTab === "name" ? "white" : "#666" }}>{t.profile.selectName}</button>
         </div>
 
+        {/* İÇERİK ALANI */}
         <div style={{ maxHeight: "40vh", overflowY: "auto", padding: "10px", background: "#f9fafb", borderRadius: "12px", border: "1px solid #eee" }}>
           
+          {/* Avatar Seçimi */}
           {activeTab === "avatar" && (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(50px, 1fr))", gap: "10px" }}>
               {AVATARS.map((av) => (
@@ -196,6 +214,7 @@ const ProfileSettingsModal = ({
             </div>
           )}
 
+          {/* Bölge Seçimi */}
           {activeTab === "region" && (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))", gap: "10px" }}>
               {REGIONS.map((reg) => (
@@ -218,6 +237,7 @@ const ProfileSettingsModal = ({
             </div>
           )}
 
+          {/* İsim Değiştirme */}
           {activeTab === "name" && (
             <div style={{ padding: "10px", display: "flex", flexDirection: "column", gap: "10px" }}>
                <label style={{fontWeight: "bold", color: "#555"}}>Yeni Kullanıcı Adı:</label>
@@ -234,6 +254,7 @@ const ProfileSettingsModal = ({
           )}
         </div>
         
+        {/* Önizleme */}
         <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "10px", margin: "20px 0", fontSize: "1.2rem", background: "#fff", padding: "10px", borderRadius: "10px", boxShadow: "0 2px 5px rgba(0,0,0,0.05)" }}>
            <span style={{color: "#333"}}>{t.profile.current}:</span> 
            <span style={{ fontSize: "1.8rem" }}>{tempAvatar}</span>
@@ -241,6 +262,7 @@ const ProfileSettingsModal = ({
            <span style={{ fontSize: "1.1rem", fontWeight: "bold", marginLeft: "5px", color: "#3b82f6" }}>{tempName}</span>
         </div>
 
+        {/* Butonlar */}
         <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
           <button onClick={onClose} className="universal-btn" style={{ background: "#9ca3af", color: "white" }} disabled={isLoading}>
             {t.buttons.back}
@@ -260,8 +282,11 @@ const ProfileSettingsModal = ({
   );
 };
 
-
+// ====================================================================
+// 3. ANA UYGULAMA (APP)
+// ====================================================================
 function App() {
+  // State Tanımları
   const [user, setUser] = useState<any>(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
   const [resetCode, setResetCode] = useState<string | null>(null);
@@ -298,7 +323,16 @@ function App() {
   const isProcessing = useRef(false);
   const t = TRANSLATIONS[language];
 
-  // --- PROFİL GÜNCELLEME (İSİM + FİLTRE) ---
+  // --- GOOGLE VERİSİNİ MASKELEME MANTIĞI ---
+  // Eğer kullanıcının fotoğrafı http içeriyorsa (Google linki) veya Google kelimesi geçiyorsa,
+  // bunu arayüzde gösterme, yerine varsayılanı göster.
+  const displayAvatar = (user?.photoURL && (user.photoURL.includes("http") || user.photoURL.includes("google"))) 
+                        ? DEFAULT_AVATAR 
+                        : (user?.photoURL || DEFAULT_AVATAR);
+  
+  const displayName = user?.displayName || DEFAULT_NAME;
+
+  // --- PROFİL GÜNCELLEME (GÜVENLİ) ---
   const handleProfileUpdate = async (newAvatar: string, newRegion: string, newName: string) => {
     setIsProcessingProfile(true);
     try {
@@ -308,10 +342,14 @@ function App() {
           return;
       }
 
-      if (filter.isProfane(newName)) {
-          alert("Bu kullanıcı adı uygunsuz kelimeler içeriyor. Lütfen değiştirin.");
-          setIsProcessingProfile(false);
-          return;
+      // 1. İSMİ TEMİZLEME (Regex ile sadece harf ve rakam bırak)
+      const cleanName = newName.replace(/[^a-zA-Z0-9çğıöşüÇĞİÖŞÜ]/g, "");
+
+      // 2. KÜFÜR KONTROLÜ
+      if (filter.isProfane(cleanName)) { 
+          alert("Bu kullanıcı adı uygunsuz kelimeler içeriyor. Lütfen değiştirin."); 
+          setIsProcessingProfile(false); 
+          return; 
       }
 
       const currentUser = auth.currentUser;
@@ -334,6 +372,7 @@ function App() {
     }
   };
 
+  // --- FIREBASE LISTENERS ---
   useEffect(() => {
     if (!user?.uid) return;
     const scoresRef = collection(db, "leaderboard");
@@ -368,6 +407,7 @@ function App() {
     return () => unsubscribe();
   }, []);
 
+  // --- OYUN FONKSİYONLARI ---
   const handleLogout = async () => {
     await signOut(auth);
     setGameState("menu");
@@ -393,7 +433,6 @@ function App() {
     localStorage.setItem("mathGameShowSecret", String(newValue));
   };
 
-  // HATA ÇÖZÜMÜ: Kullanılmayan parametre için _finalScore kullanıldı
   const checkHighScore = (_finalScore: number) => { return false; };
 
   const handleModeSelect = (mode: GameMode) => {
@@ -460,7 +499,7 @@ function App() {
            finalScore += bonus;
            setScore(finalScore);
            setMessage(`${t.messages.timeBonus} +${bonus}!`);
-           saveScoreToFirebase(finalScore, "timeAttack", timeDifficulty, user?.displayName || "Anonim", user?.photoURL, selectedRegion, user.uid);
+           saveScoreToFirebase(finalScore, "timeAttack", timeDifficulty, displayName, displayAvatar, selectedRegion, user.uid);
         }
         checkHighScore(finalScore);
         setTimeout(() => setGameState("won"), 1500);
@@ -501,12 +540,12 @@ function App() {
 
   useEffect(() => { if (gameState === "playing" && gameMode === "normal" && !showExitConfirm) { const i = setInterval(() => setTotalTime(t => t+1), 1000); return () => clearInterval(i); } }, [gameState, gameMode, showExitConfirm]);
   useEffect(() => { if (gameState === "playing" && gameMode === "timeAttack" && !showExitConfirm && !isTransitioning) { const i = setInterval(() => setTimeLeft(prev => { if(prev<=1) { clearInterval(i); setGameState("lost"); setMessage(t.messages.timeUp); return 0; } return prev - 1; }), 1000); return () => clearInterval(i); } }, [gameState, gameMode, isTransitioning, showExitConfirm]);
-  useEffect(() => { if (gameState === "lost" && gameMode === "timeAttack" && score > 0) { saveScoreToFirebase(score, "timeAttack", timeDifficulty, user?.displayName || "Anonim", user?.photoURL, selectedRegion, user.uid); checkHighScore(score); } }, [gameState]);
+  useEffect(() => { if (gameState === "lost" && gameMode === "timeAttack" && score > 0) { saveScoreToFirebase(score, "timeAttack", timeDifficulty, displayName, displayAvatar, selectedRegion, user.uid); checkHighScore(score); } }, [gameState]);
 
   const handleExitClick = () => setShowExitConfirm(true);
   const confirmExit = () => { 
       if (gameMode === "timeAttack" && score > 0) { 
-          saveScoreToFirebase(score, "timeAttack", timeDifficulty, user?.displayName || "Anonim", user?.photoURL, selectedRegion, user.uid); 
+          saveScoreToFirebase(score, "timeAttack", timeDifficulty, displayName, displayAvatar, selectedRegion, user.uid); 
           checkHighScore(score); 
       } 
       setShowExitConfirm(false); 
@@ -518,6 +557,7 @@ function App() {
   if (!user) return <div className="app-root"><Auth /></div>;
   if (showGlobalLeaderboard) return <GlobalLeaderboard onClose={() => setShowGlobalLeaderboard(false)} isAdmin={user?.email === ADMIN_EMAIL} />;
 
+  // --- RENDER (MENÜ EKRANI) ---
   if (gameState === "menu") {
     return (
       <div className="app-root">
@@ -525,9 +565,9 @@ function App() {
         {/* PROFİL MODALI */}
         {showProfileModal && (
           <ProfileSettingsModal 
-             currentAvatar={user.photoURL || "👤"} 
+             currentAvatar={displayAvatar} 
              currentRegion={selectedRegion}
-             currentName={user.displayName || "Oyuncu"} 
+             currentName={displayName} 
              onSave={handleProfileUpdate}
              onClose={() => setShowProfileModal(false)}
              isLoading={isProcessingProfile} 
@@ -541,7 +581,7 @@ function App() {
           <button onClick={() => setLanguage("en")} className="universal-btn small select-btn" style={{background: language==="en"?"#3b82f6":"#e5e7eb", color: language==="en"?"white":"#333", fontWeight: "bold", border: language==="en" ? "none" : "1px solid #d1d5db"}}>EN</button>
         </div>
         
-        {/* Kullanıcı Profili */}
+        {/* Kullanıcı Profili (MASKELENMİŞ VERİLERLE) */}
         <div style={{position: "absolute", top: "20px", right: "20px", zIndex: 10, display: "flex", alignItems: "center", gap: "10px"}}>
              <button 
                 onClick={() => setShowProfileModal(true)}
@@ -554,14 +594,15 @@ function App() {
                 className="profile-btn"
                 title={t.buttons.editProfile}
              >
-               <span style={{fontSize: "1.4rem", lineHeight: 1}}>{user.photoURL || "👤"}</span>
+               <span style={{fontSize: "1.4rem", lineHeight: 1}}>{displayAvatar}</span>
                <span style={{fontSize: "1.2rem", lineHeight: 1}}>{selectedRegion}</span>
-               <span style={{borderLeft: "1px solid #ddd", paddingLeft: "8px"}}>{user.displayName || "Oyuncu"}</span>
+               <span style={{borderLeft: "1px solid #ddd", paddingLeft: "8px"}}>{displayName}</span>
              </button>
 
              <button onClick={handleLogout} className="universal-btn small btn-danger" style={{fontSize: "0.8rem", padding: "6px 12px"}}>{t.buttons.logout}</button>
         </div>
 
+        {/* Skor Paneli */}
         <div className="high-score-panel" style={{top: "70px"}}>
            <h3 className="panel-title">🏆 {t.leaderboard} ({t.local})</h3>
            <div className="score-row easy"><span>🟢 {t.highScores.easy}</span><span>{highScores.easy}</span></div>
@@ -569,12 +610,14 @@ function App() {
            <div className="score-row hard"><span>🔴 {t.highScores.hard}</span><span>{highScores.hard}</span></div>
         </div>
 
+        {/* Admin Butonu */}
         {user?.email === ADMIN_EMAIL && (
           <div style={{position: "fixed", bottom: "20px", left: "20px", zIndex: 999}}>
             <button onClick={toggleSecret} className="universal-btn small" style={{background: "#64748b", color: "white"}}>{showSecret ? t.buttons.debugOn : t.buttons.debugOff}</button>
           </div>
         )}
 
+        {/* Ana Menü İçeriği */}
         <div className="game-card mainMenu-card" style={{textAlign: "center", padding: "40px 30px"}}>
           <div style={{display: "flex", justifyContent: "center", marginBottom: "15px"}}><Logo style={{maxWidth: "100%", height: "auto"}} /></div>
           
@@ -600,6 +643,7 @@ function App() {
     );
   }
 
+  // --- RENDER (OYUN EKRANI) ---
   return (
     <div className="app-root">
       {showExitConfirm && (
